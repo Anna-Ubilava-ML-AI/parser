@@ -15,8 +15,16 @@ V -> "smiled" | "tell" | "were"
 """
 
 NONTERMINALS = """
-S -> N V
+S -> NP VP | S Conj S
+
+NP -> N | Det N | Det AP N | NP PP | NP Conj NP
+AP -> Adj | Adj AP
+
+VP -> V | V NP | V NP PP | V PP | VP Conj VP | Adv VP | VP Adv
+
+PP -> P NP
 """
+
 
 grammar = nltk.CFG.fromstring(NONTERMINALS + TERMINALS)
 parser = nltk.ChartParser(grammar)
@@ -62,8 +70,10 @@ def preprocess(sentence):
     and removing any word that does not contain at least one alphabetic
     character.
     """
-    raise NotImplementedError
+    from nltk.tokenize import word_tokenize
 
+    tokens = word_tokenize(sentence.lower())
+    return [word for word in tokens if any(char.isalpha() for char in word)]
 
 def np_chunk(tree):
     """
@@ -72,7 +82,25 @@ def np_chunk(tree):
     whose label is "NP" that does not itself contain any other
     noun phrases as subtrees.
     """
-    raise NotImplementedError
+    chunks = []
+
+    # Go through every subtree in the tree
+    for subtree in tree.subtrees():
+        # Check if the subtree is a noun phrase (NP)
+        if subtree.label() == "NP":
+
+            # Check if this NP contains another NP inside it
+            contains_inner_np = False
+            for child in subtree.subtrees():
+                if child != subtree and child.label() == "NP":
+                    contains_inner_np = True
+                    break
+
+            # If this NP does NOT contain another NP, it's a chunk
+            if not contains_inner_np:
+                chunks.append(subtree)
+
+    return chunks
 
 
 if __name__ == "__main__":
